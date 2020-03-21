@@ -2,6 +2,7 @@ import pygame
 import random
 import enum
 import time
+from threading import Timer,Thread,Event
 #********************   COLORS  *******************************
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
@@ -27,6 +28,25 @@ import subprocess
 subprocess.Popen(rmCommand.split()).communicate()
 
 #******************* CLASS DECLARATIONS *************************
+class MyTimer:
+
+   def __init__(self,t,hFunction):
+      self.t=t
+      self.hFunction = hFunction
+      self.thread = Timer(self.t,self.handle_function)
+
+   def handle_function(self):
+      self.hFunction()
+      self.thread = Timer(self.t,self.handle_function)
+      self.thread.start()
+
+   def start(self):
+      self.thread.start()
+
+   def cancel(self):
+      self.thread.cancel()
+
+            
 class Motion(enum.Enum):
     STOP = 0
     LEFT = 1
@@ -101,6 +121,10 @@ class Reciever:
         elif self.radius > 100 :
             self.radius = 0
 
+def save_player_position() :
+    f = open("player_pos.txt", "a")
+    f.write(str(player.coord[0]) + " " + str(player.coord[1]) + "\n")
+    f.close()
 
 #********************   GLOBAL OBJECTS  *******************************
 pygame.init()
@@ -110,6 +134,7 @@ clock = pygame.time.Clock()
 player = Player(sc, (-100, -100))
 recievers = list()
 start = time.time()
+timer = MyTimer(1.0, save_player_position)
 #******************* MAIN LOOP ***************************************
 pygame.display.set_caption("Moving point.")
 
@@ -117,6 +142,7 @@ while game_running:
     clock.tick(FPS)
     for i in pygame.event.get():
         if i.type == pygame.QUIT:
+            pygame.display.quit()
             pygame.quit()
             game_running = False
         elif i.type == pygame.KEYDOWN or i.type == pygame.KEYUP:
@@ -127,6 +153,7 @@ while game_running:
                 recievers.append(Reciever(sc, i.pos, len(recievers)))
             elif i.button == 3:
                 player.coord = list(i.pos)
+                timer.start()
     pygame.Surface.fill(sc, WHITE)
 
     player.move()
@@ -137,3 +164,4 @@ while game_running:
         recievers[i].check_player_pos(player)
 
     pygame.display.update()
+timer.cancel()
